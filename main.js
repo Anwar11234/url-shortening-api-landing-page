@@ -8,7 +8,6 @@ const toggleMenu = () => {
 
 hamburger.addEventListener('click' , toggleMenu);
 
-
 // url shortening
 
 const formContainer = document.querySelector('.shorten');
@@ -18,11 +17,12 @@ const input = document.querySelector('.link');
 
 // save results to local storage
 const results = JSON.parse(localStorage.getItem('results') ) || []; 
-document.addEventListener('DOMContentLoaded' , displayResults);
+document.addEventListener('DOMContentLoaded' , displayResultsOnload);
 
-function displayResults(){ 
+function displayResultsOnload(){ 
     results.forEach(result => { 
-        const resultsContainer = makeElement('div' , '' , 'result');
+        const resultsContainer = document.createElement('div');
+        resultsContainer.classList.add('result');
         resultsContainer.innerHTML = result;
         linksContainer.append(resultsContainer);
     });
@@ -31,20 +31,8 @@ function displayResults(){
 form.addEventListener('submit' , e => { 
     e.preventDefault();
     const url = input.value;
-    input.value = '';
-    shorten(url)
-        .then(result => { 
-            displayData(url , result);
-        })
-        .catch(() => { 
-            input.style.border = '3px solid hsl(0, 87%, 67%)';
-            const errorMsg = makeElement('p' , 'Please Enter a valid url' , 'error');
-            form.append(errorMsg);
-            setTimeout(() => { 
-                errorMsg.remove();
-                input.style.border = 'initial';
-            },2000)
-        })
+    form.reset();
+    shortenUrlAndDiplayResult(url);
 })
 
 async function shorten(url){ 
@@ -58,22 +46,38 @@ async function shorten(url){
 }
 
 function displayData(originalUrl , shortenedUrl){ 
-   const url = makeElement('p' , originalUrl , 'url');
-   const result = makeElement('p' , shortenedUrl, 'url--shortend');
-   const btn = makeElement('button' , 'copy' , 'btn' );
-   const parentDiv = makeElement('div','' , 'result' , url , result , btn);
-   linksContainer.append(parentDiv);
-   results.push(parentDiv.innerHTML);
-   localStorage.setItem('results' , JSON.stringify(results));
+    const html = `<div class="result">
+    <p class="url">${originalUrl}</p>
+    <p class="url--shortend">${shortenedUrl}</p>
+    <button class="btn">copy</button></div>`;
 
+    linksContainer.innerHTML += html;
+    const result = linksContainer.querySelector('.result');
+
+    results.push(result.innerHTML);
+    localStorage.setItem('results' , JSON.stringify(results));
 }
 
-function makeElement(tag ,text = '' , className , ...children){ 
-    const element = document.createElement(tag);
-    element.textContent = text;
-    element.className = className;
-    element.append(...children);
-    return element;
+async function shortenUrlAndDiplayResult(url){ 
+    try{ 
+        const result = await shorten(url);
+        displayData(url , result);
+    }
+    catch{ 
+        handleError();
+    }
+}
+
+function handleError(){ 
+    input.style.border = '3px solid hsl(0, 87%, 67%)';
+    const errorMsg = document.createElement('p');
+    errorMsg.classList.add('error');
+    errorMsg.textContent = 'Please enter a valid url'
+    form.append(errorMsg);
+    setTimeout(() => { 
+        errorMsg.remove();
+        input.style.border = 'initial';
+    },2000)
 }
 
 // copy button functionality
@@ -85,14 +89,21 @@ linksContainer.addEventListener('click' , copyUrl);
 function copyUrl(event){
     const copyBtn = event.target.closest('.btn');
     if(!copyBtn) return; 
+
     const container = copyBtn.parentElement;
     const text = container.querySelector('.url--shortend');
-    navigator.clipboard.writeText(text.textContent).then(() => { 
-        copyBtn.textContent = 'copied!';
-        copyBtn.style.backgroundColor = darkViolet ;
-        setTimeout(() =>{ 
-            copyBtn.textContent = 'copy';
-            copyBtn.style.backgroundColor = cyan;
-        } , 2000)
+
+    navigator.clipboard.writeText(text.textContent)
+    .then(() => { 
+        updateCopyBtn(copyBtn);
     })
+}
+
+function updateCopyBtn(btn){ 
+    btn.textContent = 'copied!';
+    btn.style.backgroundColor = darkViolet ;
+    setTimeout(() =>{ 
+        btn.textContent = 'copy';
+        btn.style.backgroundColor = cyan;
+    } , 2000)
 }
