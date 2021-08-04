@@ -96,4 +96,3 @@ function copyUrl(event){
         } , 2000)
     })
 }
-
